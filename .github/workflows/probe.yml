@@ -1,0 +1,43 @@
+name: macOS time probe
+
+# Runs MacTimeProbe.cs on GitHub's hosted macOS runners and prints what each macOS version's own
+# date and time data produces. Nothing here uses secrets or a repository other than this one.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: probe (${{ matrix.os }})
+    strategy:
+      fail-fast: false          # one missing runner label must not hide the others
+      matrix:
+        # The labels change over time: check "GitHub-hosted runners" in GitHub's documentation for the current macOS ones and edit this list.
+        os: [macos-latest, macos-15, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Platform
+        run: |
+          sw_vers
+          uname -m
+          dotnet --info
+
+      - name: Probe
+        run: dotnet run MacTimeProbe.cs | tee probe-output.txt
+
+      - name: Keep the output
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-output-${{ matrix.os }}
+          path: probe-output.txt
